@@ -42,6 +42,8 @@
         var a = g.a.seed ? s.teams[g.a.seed - 1] : win[g.a.win];
         var b = g.b.seed ? s.teams[g.b.seed - 1] : win[g.b.win];
         var w = hook ? hook(g, a, b) : null;
+        // A game NSAA already shows as played is a fact, not a projection.
+        if (!w && g.winner && (g.winner === a || g.winner === b)) w = g.winner;
         if (!w) {
           var o = ov && ov[g.id];
           if (o) {
@@ -81,7 +83,7 @@
     // Averages exactly as NSAA shows them today (no subdistrict games yet).
     function current() { return standingsFrom(currentRecords(), null).avg; }
 
-    function evaluate(ov, hook) {
+    function evaluate(ov, hook, opts) {
       ov = ov || {};
       var results = {}, winners = {};
       subs.forEach(function (s) {
@@ -92,6 +94,7 @@
       var rec = currentRecords(), extra = {};
       Object.keys(results).forEach(function (k) {
         var r = results[k];
+        if (opts && opts.playedOnly && !gameById[k].game.winner) return; // validation mode: facts only
         rec[r.winner][0]++; rec[r.loser][1]++;
         (extra[r.winner] = extra[r.winner] || []).push({ opp: r.loser, res: 'W' });
         (extra[r.loser] = extra[r.loser] || []).push({ opp: r.winner, res: 'L' });
@@ -135,6 +138,10 @@
     function branchOverrides(team, wins) {
       var s = subById[subOf[team].sub], k = 0, done = false, ov = {};
       resolveSub(s, {}, function (g, a, b) {
+        if (g.winner && (g.winner === a || g.winner === b)) { // already played: counts toward the path
+          if (a === team || b === team) { if (g.winner === team) k++; else done = true; }
+          return null;
+        }
         if (done || (a !== team && b !== team)) return null;
         var opp = a === team ? b : a;
         if (k < wins) { k++; ov[g.id] = team; return team; }
@@ -158,6 +165,7 @@
       Object.keys(base.results).forEach(function (id) {
         var r = base.results[id];
         if (r.a === team || r.b === team) return;
+        if (gameById[id].game.winner) return; // already played
         var fav = r.winner, dog = r.loser;
         var ev = evaluate(merge(ovBase, (function () { var o = {}; o[id] = dog; return o; })()));
         var m = matchup(ev, team), seed = ev.seedOf[team] || 99;
@@ -181,7 +189,7 @@
       function rnd() { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
       var out = 0, minMargin = Infinity, worstSeed = 0, hostCount = 0;
       for (var i = 0; i < n; i++) {
-        var ev = evaluate(ovBase, function (g, x, y) { if (ovBase[g.id]) return null; return rnd() < 0.5 ? x : y; });
+        var ev = evaluate(ovBase, function (g, x, y) { if (ovBase[g.id] || g.winner) return null; return rnd() < 0.5 ? x : y; });
         var seed = ev.seedOf[team];
         if (!seed) { out++; continue; }
         if (seed > worstSeed) worstSeed = seed;

@@ -12,17 +12,25 @@
 
   // ---------- core computations ----------
   var maxW = E.maxWins(TEAM);
-  var BR = [{ key: 'title', wins: Infinity, label: 'win our subdistrict' }];
-  if (maxW >= 2) BR.push({ key: 'final', wins: maxW - 1, label: 'lose the subdistrict final' });
-  for (var w = maxW - 2; w >= 1; w--) BR.push({ key: 'r' + w, wins: w, label: 'lose after ' + w + ' wins' });
-  BR.push({ key: 'first', wins: 0, label: 'lose our first game' });
+  var BASE0 = E.evaluate({});
+  var tw = SUB.games.filter(function (g) { return g.winner === TEAM; }).length; // wins already in the books
+  var eliminated = SUB.games.some(function (g) { var r = BASE0.results[g.id]; return g.winner && (r.a === TEAM || r.b === TEAM) && g.winner !== TEAM; });
+  var BR = [];
+  if (eliminated) BR.push({ key: 'done', wins: tw, label: 'finish where we are' });
+  else {
+    BR.push({ key: 'title', wins: Infinity, label: 'win our subdistrict' });
+    for (var w = maxW - 1; w >= tw; w--) BR.push({ key: 'r' + w, wins: w, label: w === maxW - 1 ? 'lose the subdistrict final' : (w === tw ? (tw === 0 ? 'lose our first game' : 'lose our next game') : 'lose after ' + w + ' wins') });
+  }
   BR.forEach(function (b) {
     b.ov = E.branchOverrides(TEAM, b.wins);
     b.ev = E.evaluate(b.ov);
     b.m = E.matchup(b.ev, TEAM);
     b.sens = E.sensitivity(TEAM, b.ov);
   });
-  var T = BR[0], FIN = BR.filter(function (b) { return b.key === 'final'; })[0], FIRST = BR[BR.length - 1];
+  var T = BR[0], FIRST = BR[BR.length - 1];
+  var FIN = (!eliminated && maxW - 1 >= tw) ? BR.filter(function (b) { return b.wins === maxW - 1; })[0] : null;
+  if (FIN === FIRST) FIN = null; // only one losing branch left (e.g. we are already in the final)
+  var nextGame = null;
 
   // our path games under the title branch
   var pathGames = SUB.games.filter(function (g) { var r = T.ev.results[g.id]; return r.a === TEAM || r.b === TEAM; });
@@ -43,37 +51,43 @@
     return by;
   }
   function hero() {
-    var html = '', t = T.m, lines = [];
+    var t = T.m;
     if (!t) { $('answer').innerHTML = '<p>We are not projected to reach the district final in any scenario we tested.</p>'; return; }
-    var big = t.host ? 'Win our subdistrict and we are projected to host.' : 'Win our subdistrict and we are projected #' + t.seed + '.';
-    var titleLine = 'Winning both games at ' + esc(SUB.host) + ' puts us at about <b>' + f2(T.ev.avg[TEAM]) + '</b>, projected <b>' + seedTxt(t.seed, t.host) + '</b>' +
-      (t.host ? ', so we host the district final on Sat, Oct 31.' : ', so we would travel to #' + t.opp.seed + ' ' + esc(t.opp.team) + '.');
+    if (eliminated) {
+      $('answer').innerHTML = '<div class="big cond">Our subdistrict is over. We are ' + (t.host ? 'projected to host.' : 'still in as a wildcard.') + ' <span class="chip proj">Projected</span></div><div class="tiles">' + tile(T, 'Where we stand', t.host ? 'We host if this holds.' : 'We travel unless other results move us up.') + '</div>';
+      finishHero(); return;
+    }
+    var big = t.host ? 'Win the subdistrict and we host the district final.' : 'Win the subdistrict and we are projected #' + t.seed + '.';
+    var lostLabel = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+    function tile(b, label, note) {
+      var m = b.m;
+      if (!m) return '<div class="tile"><div class="tl">' + esc(label) + '</div><div class="trow"><div class="tn">&ndash;</div><div class="tside"><div class="tw">Out of the field</div></div></div><div class="tx">' + note + '</div></div>';
+      var trip = (!m.host && TRAVEL[m.opp.team]) ? '<div class="tm">' + esc(TRAVEL[m.opp.team]) + '</div>' : '';
+      return '<div class="tile' + (m.host ? ' home' : '') + '"><div class="tl">' + esc(label) + '</div><div class="trow"><div class="tn">#' + m.seed + '</div><div class="tside"><span class="hr ' + (m.host ? 'home' : 'road') + '">' + (m.host ? 'Home' : 'Road') + '</span><div class="tw">' + (m.host ? 'Host' : 'At') + ' #' + m.opp.seed + ' ' + esc(m.opp.team) + '</div>' + trip + '</div></div><div class="tx">' + note + '</div></div>';
+    }
     var caveats = decisiveFlips(T, false);
-    if (t.host && caveats.length) {
-      var x = caveats[0];
-      titleLine += ' <b>One catch:</b> if ' + esc(x.underdog) + ' beats ' + esc(x.favorite) + ', even a title leaves us ' + seedTxt(x.seedFlip, x.hostFlip) + '.';
-    }
-    lines.push(titleLine);
-    if (FIN) {
-      var f = FIN.m, fl;
-      if (f.host) fl = 'Lose the final and we are still projected <b>' + seedTxt(f.seed, true) + '</b> and host.';
+    var n1 = !t.host ? 'We would need help from other results.' : (caveats.length ? '<b>Catch:</b> if ' + esc(caveats[0].underdog) + ' upsets ' + esc(caveats[0].favorite) + ', we drop to ' + seedTxt(caveats[0].seedFlip, caveats[0].hostFlip) + '.' : 'Winning is enough.');
+    var n2 = '';
+    if (FIN && FIN.m) {
+      if (FIN.m.host) n2 = 'We still host.';
       else {
-        fl = 'Lose the final and we are projected <b>' + seedTxt(f.seed, false) + '</b>: a trip to #' + f.opp.seed + ' ' + esc(f.opp.team) +
-          (TRAVEL[f.opp.team] ? ' (' + TRAVEL[f.opp.team] + ')' : '') + '.';
         var gains = decisiveFlips(FIN, true), by = groupByFavorite(gains), keys = Object.keys(by);
-        if (keys.length === 1 && by[keys[0]].length >= 1) fl += ' <b>That changes if ' + esc(keys[0]) + ' loses a game</b> in their subdistrict. Then we move up to #' + gains[0].seedFlip + ' and host.';
-        else if (gains.length) fl += ' That changes if ' + gains.slice(0, 2).map(function (x) { return esc(x.underdog) + ' beats ' + esc(x.favorite); }).join(' or ') + '. Then we move up and host.';
+        if (keys.length === 1) n2 = 'We move up to #' + gains[0].seedFlip + ' and host if <b>' + esc(keys[0]) + ' loses a game</b>.';
+        else if (gains.length) n2 = 'We move up and host if ' + gains.slice(0, 2).map(function (x) { return esc(x.underdog) + ' beats ' + esc(x.favorite); }).join(' or ') + '.';
+        else n2 = 'No other single result changes this.';
       }
-      lines.push(fl);
     }
-    var lm = FIRST.m;
-    var ll = 'Lose our first game (Tue, Oct 27) and we are projected <b>' + seedTxt(lm.seed, lm.host) + '</b>' + (lm.host ? '' : ' at #' + lm.opp.seed + ' ' + esc(lm.opp.team)) + '. <b>We are still in</b> as a wildcard.';
-    if (D.checks && D.checks.firstLossSafeUpTo > 0 && !D.checks.firstLossOutAt) ll += ' We tested every combination of up to ' + D.checks.firstLossSafeUpTo + ' upsets elsewhere. We stayed in every time.';
-    lines.push(ll);
-    html = '<div class="big cond">' + big + ' <span class="chip proj">Projected</span></div><ul>' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>';
-    $('answer').innerHTML = html;
-    var first = pathGames[0];
-    $('next').innerHTML = '<b>Next game:</b> ' + esc(when(first)) + ' at ' + esc(first.site) + ' vs ' + esc(describeSlot(oppSlot(first))) + '.';
+    var firstHost = FIRST.m && FIRST.m.host;
+    var n3 = firstHost ? 'We would still host.' : 'Still in as a wildcard.' + ((D.checks && D.checks.firstLossSafeUpTo > 0 && !D.checks.firstLossOutAt) ? ' Holds up through any ' + D.checks.firstLossSafeUpTo + ' upsets elsewhere.' : '');
+    var tiles = tile(T, 'Win the subdistrict', n1);
+    if (FIN) tiles += tile(FIN, 'Lose the final', n2);
+    tiles += tile(FIRST, lostLabel(FIRST.label), n3);
+    $('answer').innerHTML = '<div class="big cond">' + big + ' <span class="chip proj">Projected</span></div><div class="tiles">' + tiles + '</div>';
+    finishHero();
+  }
+  function finishHero() {
+    nextGame = pathGames.filter(function (g) { return !g.winner; })[0];
+    $('next').innerHTML = nextGame ? '<b>Next game:</b> ' + esc(when(nextGame)) + ' at ' + esc(nextGame.site) + ' vs ' + esc(describeSlot(oppSlot(nextGame))) + '.' : '<b>Our subdistrict games are finished.</b> The district final is next.';
     $('asof').textContent = 'Data as of ' + D.asOf;
     $('foot-asof').textContent = 'Records, averages and brackets as of ' + D.asOf + ' from the NSAA wildcard schedules (' + D.source + '). Updated after each round of play.';
   }
@@ -123,7 +137,7 @@
         '<div class="pick">Root for <em>' + esc(it.root) + '</em> over ' + esc(it.other) + '</div>' + tags +
         '<p class="why">' + lines.join(' ') + '</p></div>';
     }
-    $('roots').innerHTML = top.length ? top.map(card).join('') : '<div class="root"><p class="why">Nothing outside our own games decides home or road right now. Win and we are in good shape.</p></div>';
+    $('roots').innerHTML = top.length ? top.map(card).join('') : '<div class="root"><p class="why">No single result elsewhere decides home or road for us right now.</p></div>';
     var more = '';
     if (rest.length || neutral.length) {
       more = '<details><summary>More games that nudge us (' + (rest.length + neutral.length) + ')</summary>' +
@@ -142,13 +156,14 @@
     var slot = oppSlot(g);
     if (slot.seed) return [SUB.teams[slot.seed - 1]];
     var r = T.ev.results[slot.win];
+    if (E.gameById[slot.win].game.winner) return [r.winner]; // already decided
     var fav = r.winner, dog = r.loser;
     return [fav, dog];
   }
   function cart(arrs) { return arrs.reduce(function (acc, a) { var out = []; acc.forEach(function (p) { a.forEach(function (x) { out.push(p.concat([x])); }); }); return out; }, [[]]); }
   function scenarioRows() {
-    var n = pathGames.length, groups = [];
-    for (var stage = n; stage >= 0; stage--) {
+    var n = pathGames.length, groups = [], pw = pathGames.filter(function (g) { return g.winner === TEAM; }).length;
+    for (var stage = n; stage >= pw; stage--) {
       var upto = Math.min(stage, n - 1), opts = [];
       for (var j = 0; j <= upto; j++) opts.push(optionsFor(pathGames[j]));
       var rows = cart(opts).map(function (combo) {
@@ -160,7 +175,7 @@
         }
         // keep lookahead games from re-deciding our results
         var ev = E.evaluate(ov), m = E.matchup(ev, TEAM);
-        var path = combo.map(function (o, j) { return (j === 0 ? '' : 'then ') + (j < stage ? (j === 0 ? 'Beat ' : 'beat ') : (j === 0 ? 'Lose to ' : 'lose to ')) + o; });
+        var path = combo.map(function (o, j) { return (j === 0 ? '' : 'then ') + (j < stage ? (j === 0 ? 'Beat ' : 'beat ') : (j === 0 ? 'Lose to ' : 'lose to ')) + o + (j < pw ? ' (done)' : ''); });
         return { text: path.join(', '), ev: ev, m: m };
       });
       groups.push({ stage: stage, rows: rows });
@@ -168,12 +183,18 @@
     return groups;
   }
   function groupTitle(stage, n) {
+    var pw = pathGames.filter(function (g) { return g.winner === TEAM; }).length;
     if (stage === n) return 'Win the subdistrict';
     if (stage === n - 1) return 'Lose the final';
-    if (stage === 0) return 'Lose our first game';
+    if (stage === pw) return pw === 0 ? 'Lose our first game' : 'Lose our next game';
     return 'Lose after ' + stage + ' wins';
   }
   function renderPaths() {
+    if (eliminated) {
+      var m0 = T.m;
+      $('paths').innerHTML = '<div class="group"><h3>Where we stand</h3><div class="row' + (m0 && m0.host ? ' host' : '') + '"><div class="how">Our subdistrict is over</div><div class="res">' + (m0 ? '<span class="hr ' + (m0.host ? 'home' : 'road') + '">' + (m0.host ? 'Home' : 'Road') + '</span> &middot; ' + (m0.host ? 'host' : 'at') + ' #' + m0.opp.seed + ' ' + esc(m0.opp.team) : 'Out of the 16-team field') + '</div>' + (m0 ? '<div class="seedbox"><div class="n">#' + m0.seed + '</div><div class="a">' + f2(T.ev.avg[TEAM]) + '</div></div>' : '') + '</div></div>';
+      return;
+    }
     var n = pathGames.length, groups = scenarioRows();
     $('paths').innerHTML = groups.map(function (g) {
       return '<div class="group"><h3>' + esc(groupTitle(g.stage, n)) + '</h3>' + g.rows.map(function (r) {
@@ -216,6 +237,7 @@
   // ---------- schedule ----------
   function renderSched() {
     var rows = pathGames.map(function (g) {
+      if (g.winner) { var r = T.ev.results[g.id], opp = r.a === TEAM ? r.b : r.a; return '<div class="row"><div class="how">' + esc(g.date) + ' &middot; Played</div><div class="res">' + (g.winner === TEAM ? 'Beat ' : 'Lost to ') + esc(opp) + ' ' + esc(g.score || '') + '</div></div>'; }
       var label = g === pathGames[pathGames.length - 1] ? 'Subdistrict final' : 'Subdistrict semifinal';
       if (pathGames.length === 1) label = 'Subdistrict final';
       return '<div class="row"><div class="how">' + esc(g.date) + ', ' + esc(g.time) + '</div><div class="res">' + label + ' &middot; ' + esc(g.site) + ' &middot; vs ' + esc(describeSlot(oppSlot(g))) + '</div></div>';
@@ -235,13 +257,13 @@
     elseIds.sort(function (a, b) { var A = E.gameById[a], B = E.gameById[b]; return A.sub.id === B.sub.id ? A.game.n - B.game.n : (A.sub.id < B.sub.id ? -1 : 1); });
   }
   function teamBtn(g, team, ev) {
-    var win = ev.results[g.id].winner === team;
+    var win = ev.results[g.id].winner === team, locked = !!g.winner;
     var s = E.subOf[team], r = D.teams[team];
-    return '<button type="button" class="team' + (team === TEAM ? ' us' : '') + '" data-g="' + esc(g.id) + '" data-t="' + esc(team) + '" aria-pressed="' + win + '">' + esc(team) + '<small>' + r.w + '-' + r.l + ' &middot; #' + s.seed + ' seed</small></button>';
+    return '<button type="button" class="team' + (team === TEAM ? ' us' : '') + '" data-g="' + esc(g.id) + '" data-t="' + esc(team) + '" aria-pressed="' + win + '"' + (locked ? ' disabled' : '') + '>' + esc(team) + '<small>' + r.w + '-' + r.l + ' &middot; #' + s.seed + ' seed</small></button>';
   }
   function gameRow(id, ev) {
     var gi = E.gameById[id], g = gi.game, r = ev.results[id];
-    return '<div class="game"><div class="meta">' + esc(gi.sub.id) + ' &middot; ' + esc(when(g)) + ' &middot; ' + esc(g.site) + '</div><div class="pickrow">' + teamBtn(g, r.a, ev) + teamBtn(g, r.b, ev) + '</div></div>';
+    return '<div class="game"><div class="meta">' + esc(gi.sub.id) + ' &middot; ' + esc(when(g)) + ' &middot; ' + esc(g.site) + (g.winner ? ' &middot; <b>Final: ' + esc(g.winner) + ' ' + esc(g.score || '') + '</b>' : '') + '</div><div class="pickrow">' + teamBtn(g, r.a, ev) + teamBtn(g, r.b, ev) + '</div></div>';
   }
   function renderPicker() {
     var ev = E.evaluate(picks), m = E.matchup(ev, TEAM);
