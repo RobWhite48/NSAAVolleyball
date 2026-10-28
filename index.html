@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Lincoln Lutheran Volleyball: Playoff Guide</title>
+<meta name="description" content="What has to happen for Lincoln Lutheran volleyball to host the C1 district final, who we could play, and what to root for. Unofficial fan guide.">
+<meta property="og:title" content="Lincoln Lutheran Volleyball: Playoff Guide">
+<meta property="og:description" content="What has to happen, who we could play, and what to root for. Unofficial fan guide, not affiliated with NSAA.">
+<meta name="theme-color" content="#12294f">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="banner" role="note">
+  <div class="wrap">
+    <span><b>Unofficial fan guide</b> &middot; Not affiliated with NSAA</span>
+    <span id="asof">Data as of &hellip;</span>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Lincoln Lutheran Volleyball &middot; Class C1 playoffs</div>
+    <h1>Path to Hosting a District Final</h1>
+    <div class="answer" id="answer"></div>
+    <p class="next" id="next"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p>This guide needs JavaScript turned on to calculate the scenarios.</p></noscript>
+
+  <section aria-labelledby="h-scen" id="scen-sec" hidden>
+    <h2 id="h-scen">Every way it can go</h2>
+    <p class="sub">All combinations of the games that can still move our home or road status. We start with the one where we win, then the rest from likeliest to least. <span class="chip proj">Projected</span></p>
+    <div id="scen"></div>
+  </section>
+
+  <section aria-labelledby="h-line">
+    <h2 id="h-line">How close is the line?</h2>
+    <p class="sub">Home games stop after the #8 seed. Here is the bubble for each result. <span class="chip proj">Projected</span></p>
+    <div class="seg" id="seg" role="group" aria-label="Pick a result"></div>
+    <div class="ladder" id="ladder"></div>
+    <p class="small muted" id="ladder-cap" style="margin-top:10px"></p>
+  </section>
+
+  <section aria-labelledby="h-root">
+    <h2 id="h-root">What to root for</h2>
+    <p class="sub">Other teams&rsquo; games can move our seed. These are the ones that matter most, biggest first. <span class="chip proj">Projected</span></p>
+    <div class="roots" id="roots"></div>
+    <div id="more-roots"></div>
+  </section>
+
+  <section aria-labelledby="h-paths">
+    <h2 id="h-paths">Every way our subdistrict can end</h2>
+    <p class="sub">Where each result leaves us, assuming the better-record team wins every game we aren&rsquo;t in. <span class="chip proj">Projected</span></p>
+    <div id="paths"></div>
+  </section>
+
+  <section aria-labelledby="h-try">
+    <h2 id="h-try">Try it yourself</h2>
+    <p class="sub">Tap a winner for any game and watch our seed, home or road, and opponent change.</p>
+    <div class="result" id="result" aria-live="polite"></div>
+    <div class="panel"><h3>Our subdistrict (C1-3)</h3><div id="pick-ours"></div></div>
+    <div class="panel"><h3>Games elsewhere that can move us</h3><div id="pick-else"></div></div>
+    <details id="all-subs-wrap"><summary>Explore any other subdistrict</summary><div id="all-subs"></div></details>
+    <button class="reset" id="reset" type="button">Reset</button>
+    <p class="small muted" style="margin-top:8px">Starting point: we win our subdistrict, and every other game goes to the team with the better record.</p>
+    <details id="field-wrap"><summary>See the full 16-team district-final field</summary><div id="field"></div></details>
+  </section>
+
+  <section aria-labelledby="h-opp">
+    <h2 id="h-opp">Who could we play?</h2>
+    <p class="sub">District finals are paired 1 v 16, 2 v 15, and so on. The higher seed hosts. <span class="chip proj">Projected</span></p>
+    <div id="opps"></div>
+  </section>
+
+  <section aria-labelledby="h-sched">
+    <h2 id="h-sched">Our games <span class="chip off">Official</span></h2>
+    <div id="sched"></div>
+  </section>
+
+  <section aria-labelledby="h-learn">
+    <h2 id="h-learn">New to NSAA playoffs?</h2>
+    <details>
+      <summary>How the playoffs work</summary>
+      <dl>
+        <dt>1. Subdistrict</dt><dd>Our group of 6 teams plays a single-elimination tournament. Only the winner moves on. We&rsquo;re the #2 seed.</dd>
+        <dt>2. District final</dt><dd>16 teams: the 10 subdistrict winners plus the 6 best of the teams that lost, ranked by points average. They are paired 1 v 16, 2 v 15, down to 8 v 9. The higher seed hosts. One match, win or go home.</dd>
+        <dt>3. State</dt><dd>The 8 district-final winners go to state in Lincoln, Nov 4 to 7.</dd>
+      </dl>
+    </details>
+    <details>
+      <summary>How the points average works</summary>
+      <p>Every match earns points, even a loss. The amount depends on the other team&rsquo;s win rate. Our average is total points divided by games played. Playing a bigger class adds bonus points (+2 for Class B, +3 for Class A).</p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>Other team&rsquo;s win rate</th><th>Win</th><th>Loss</th></tr></thead><tbody>
+        <tr><td>75% or more</td><td>50</td><td>39</td></tr>
+        <tr><td>50% to 74%</td><td>47</td><td>36</td></tr>
+        <tr><td>25% to 49%</td><td>44</td><td>33</td></tr>
+        <tr><td>Under 25%</td><td>41</td><td>30</td></tr>
+      </tbody></table></div>
+      <p class="small" style="margin-top:10px">Two surprises for parents: a win over a weak team can <em>lower</em> our average if it&rsquo;s worth less than what we already have, and points are recalculated as opponents&rsquo; records change, so our average can move even when we don&rsquo;t play. That&rsquo;s why we root for strong teams to win.</p>
+    </details>
+    <details>
+      <summary>Words you&rsquo;ll hear</summary>
+      <dl>
+        <dt>Seed</dt><dd>Our rank in the 16-team district-final field, from our points average.</dd>
+        <dt>Host</dt><dd>Seeds 1 through 8 play at home in the district final. Seeds 9 through 16 travel.</dd>
+        <dt>Wildcard</dt><dd>A team that lost its subdistrict but is one of the 6 best by average, so it still reaches the district final.</dd>
+        <dt>Official vs. projected</dt><dd>Records, averages, brackets and times come from NSAA. Seeds, home or road, and opponents are our projections until NSAA posts the district matchups.</dd>
+      </dl>
+    </details>
+    <details>
+      <summary>How we calculate the projections</summary>
+      <p>Our scenario engine uses NSAA&rsquo;s published rules and your team&rsquo;s real schedule data. It re-scores every team&rsquo;s games as records change, picks the 16-team field, and seeds it by average. For games we can&rsquo;t control, it assumes the team with the better record wins, which is why we show &ldquo;what if&rdquo; results instead of odds.</p>
+      <p class="small muted">Not modeled: playoff games in other classes that could change an opponent&rsquo;s record, and any NSAA tie-break details. Always check NSAA for the official word.</p>
+    </details>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>Unofficial.</b> This is a fan-made guide for Lincoln Lutheran volleyball families. It is not affiliated with, endorsed by, or checked by the NSAA. The district matchups are posted by NSAA after the subdistricts.</p>
+    <p id="foot-asof"></p>
+    <p>Official sources: <a href="https://nsaahome.org/volleyball/">NSAA volleyball</a> &middot; <a href="https://secure.nsaahome.org/textfile/volley/vbmanual.pdf">2026 volleyball manual</a> &middot; <a href="https://secure.nsaahome.org/wildcards/schedules/index.php?class=C1&amp;sid=78&amp;sport=vb">Lincoln Lutheran schedule</a> &middot; <a href="https://secure.nsaahome.org/nsaaforms/regions/standings.php?sport=vb&amp;class=C1">C1 standings</a></p>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
